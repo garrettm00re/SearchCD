@@ -75,20 +75,20 @@ class Trie:
         #####################################################
         print(word)
         def search_recursive(node, word, idx, edits):
+            if edits > max_edits:
+                return
             if idx == len(word):
                 if node.is_end_of_word and edits <= max_edits:
                     for p in node.path:
                         results[p] = edits # no duplicates this way
                 return
-            if edits > max_edits:
-                return
             if word[idx] in node.children:
-                search_recursive(node.children[word[idx]], word, idx + 1, edits)
+                search_recursive(node.children[word[idx]], word, idx + 1, edits) # exact match 
             for char in node.children:
-                search_recursive(node.children[char], word, idx + 1, edits + 1)
-                search_recursive(node.children[char], word, idx, edits + 1)
-            search_recursive(node, word, idx + 1, edits + 1)
-        results = {}
+                search_recursive(node.children[char], word, idx + 1, edits + 1) #replace word[idx] with char (cost = 1)
+                search_recursive(node.children[char], word, idx, edits + 1) #insert char into word (cost = 1)
+            search_recursive(node, word, idx + 1, edits + 1) #missing character
+        results = {} # (path, min edit distance)
         search_recursive(self.root, word, 0, 0)
         return results
 
@@ -100,15 +100,15 @@ def build_trie_from_tree(tree, trie):
         build_trie_from_tree(child, trie)
 
 ### High level search algorithm
-def search_folders(trie, name, max_edits = 6, max_results = 5, parent=None): ##trie search
+def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##trie search
     ts = trie.search_fuzzy(name, max_edits = max_edits)
-    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
-    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
     if parent:
         #parent_path = search_folders(trie, parent, max_results=1, parent = None)
         #print(parent, [path.lower().split('\\') for path in ts])
-        ts_pruned = {path for path in ts if parent.lower() in path.lower().split('\\')}
-        return ts_pruned
+        ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
+        #return ts_pruned
+    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
+    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
     return ts_top_results
 
 #useless as of now
@@ -182,7 +182,7 @@ def on_hotkey():
     folder_name = simpledialog.askstring("Input", "Enter folder name to search for:", parent=root)
     parent_folder = simpledialog.askstring("Input", "Enter parent folder to search within (optional):", parent=root)
     if folder_name:
-        results = search_folders(trie, folder_name, parent = parent_folder, max_edits = 6)
+        results = search_folders(trie, folder_name, parent = parent_folder, max_edits = 3)
         if results:
             selected_path = prompt_folder_selection(results)
             if selected_path:
@@ -255,6 +255,7 @@ lock_file = 'directory_tree.json.lock'
 
 
 if __name__ == "__main__":
+    print('hello')
     # Load the directory tree and build the Trie
     parser = argparse.ArgumentParser(description='Monitor directory and update tree in real-time.')
     parser.add_argument('-v', '--visualization', action='store_true', help='Enable visualization')

@@ -136,7 +136,7 @@ def build_tree(path):
     tree = {"name": os.path.basename(path), "path": path, "children": []}
     #print(tree["name"], tree['path'])
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:  # Adjust max_workers as needed
+        with ThreadPoolExecutor(max_workers=16) as executor:  # Adjust max_workers as needed
             futures = []
             for entry in os.listdir(path):
                 full_path = os.path.join(path, entry)
