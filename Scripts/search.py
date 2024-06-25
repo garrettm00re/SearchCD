@@ -1,15 +1,28 @@
-#from build_tree import load_tree_from_json
+#read/write json
 import json
-import keyboard
+
+#hotkey setup
+import keyboard 
+
+#user interface
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
+from tkinter import simpledialog, messagebox, Listbox, Label, Scrollbar, VERTICAL, RIGHT, Y, BOTH, SINGLE
+
 import subprocess
 import os
-from graphviz import Digraph
 from filelock import FileLock
-from tkinter import simpledialog, messagebox, Listbox, Label, Scrollbar, VERTICAL, RIGHT, Y, BOTH, SINGLE
+#visualization
+from graphviz import Digraph
+#options
 import argparse
+### directory changing
+import pygetwindow as gw
+import pyautogui
+from pywinauto import Desktop
+
+import time
 
 def read_json_tree():
     # Load the directory tree from the JSON file
@@ -103,10 +116,7 @@ def build_trie_from_tree(tree, trie):
 def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##trie search
     ts = trie.search_fuzzy(name, max_edits = max_edits)
     if parent:
-        #parent_path = search_folders(trie, parent, max_results=1, parent = None)
-        #print(parent, [path.lower().split('\\') for path in ts])
         ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
-        #return ts_pruned
     ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
     ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
     return ts_top_results
@@ -192,39 +202,48 @@ def on_hotkey():
                     if choice == 'yes':
                         open_new_terminal(selected_path, profile)
                     else:
-                        change_directory(selected_path, profile)
+                        #change_directory(selected_path, profile)
+                        find_shell_CD(selected_path)
         else:
             messagebox.showinfo("Search Results", "No matching folders found.")
 
     root.destroy()
 
 # Function to change directory in the active terminal
-def change_directory(path, profile = 'cmd'):
-    if os.name == 'nt':  # Windows
-        if profile == 'cmd':
-            subprocess.run(['cmd', '/K', f'cd /d {path}'])
-        elif profile == 'powershell':
-            subprocess.run(['powershell', '-NoExit', f'cd {path}'])
-        elif profile == 'bash':
-            #bash_path = r"C:\Program Files\Git\bin\bash.exe"
-            bash_path = r'C:\Program Files\Git\git-bash.exe'  
-            if os.path.exists(bash_path):
-                try:
-                    subprocess.run(['wsl', '--list'], check=True)
-                    # Use WSL to open a bash shell in the specified directory
-                    #subprocess.Popen(['wsl', 'bash', '-c', f'cd {path} && exec bash'])
-                except subprocess.CalledProcessError:
-                    print("WSL is not installed. Please install WSL and try again.")
-                #print('hello')
-                #subprocess.Popen([bash_path, '--login', '-i', '-c', f'cd "{path}" && exec bash'])
-                #subprocess.run([bash_path, '-c', f'cd {path}; exec bash'], shell=True)
-                #subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
-            else:
-                messagebox.showerror("Error", "Git Bash is not installed.")
+def change_directory(path, profile='cmd'):
+    print(path)
+    if profile == 'cmd':
+        os.system(f'cd /d {path}')
+    elif profile == 'powershell':
+        subprocess.run(['powershell', '-NoExit', '-Command', f'Set-Location -Path {path}'], shell=True)
+    elif profile == 'bash':
+        bash_path = r'C:\Program Files\Git\git-bash.exe'
+        if os.path.exists(bash_path):
+            subprocess.run([bash_path, '-c', f'cd {path}; exec bash'], shell=True)
         else:
-            raise ValueError("Unsupported profile")
-    else:  # Unix/Linux/Mac
-        subprocess.run(['bash', '-c', f'cd {path} && exec $SHELL'])
+            print("Git Bash is not installed.")
+    else:
+        raise ValueError("Unsupported profile")
+    
+def is_shell_window(window):
+    print(get_attr_and_methods(window))
+    time.sleep(0.01)
+    title = window.title.lower()
+    shell_keywords = ['command prompt', 'powershell', 'git bash', 'bash', 'terminal', 'cmd']
+    return any(keyword in title for keyword in shell_keywords) #and window.isActive 
+
+def find_shell_CD(path):
+    windows = gw.getAllWindows() # Get the list of all windows
+    shell_windows = [w for w in windows if is_shell_window(w)] # Filter the windows to get shell windows
+    if shell_windows:
+        print('hello')
+        shell_window = shell_windows[0] 
+        shell_window.activate() # Activate the most recently active shell window
+        time.sleep(0.5) # wait for the window to activate
+        pyautogui.typewrite(f'cd /d {path}')
+        pyautogui.press('enter')
+    else:
+        print("No active shell windows found.")
 
 # Function to open a new terminal window
 def open_new_terminal(path, profile):
@@ -236,14 +255,25 @@ def open_new_terminal(path, profile):
         elif profile == 'bash':
             bash_path = r'C:\Program Files\Git\git-bash.exe'
             subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
-            #subprocess.run([bash_path, '-c', f'cd {path}; exec bash'], shell=True)
-            #subprocess.Popen(['wsl', 'bash', '-c', f'cd {path} && exec bash'])
-            #subprocess.run(['wsl', '-e', 'bash', '-c', f'cd {path}; exec bash'], shell=True)
         else:
             raise ValueError("Unsupported profile")
     else:  # Unix/Linux/Mac
         subprocess.run(['gnome-terminal', '--', 'bash', '-c', f'cd {path}; exec bash'])
 
+### UTILITY
+def get_attr_and_methods(obj):
+    # Get a list of all attributes and methods of the object
+    attributes_and_methods = dir(obj)
+    # Separate attributes and methods
+    attributes = []
+    methods = []
+    for name in attributes_and_methods:
+        attr = getattr(obj, name)
+        if callable(attr):
+            methods.append(name)
+        else:
+            attributes.append(name)
+    return 'ATTRIBUTES: \n', attributes, '\n METHODS: \n', methods
 #######
 json_file = 'directory_tree.json'
 graph_file = 'directory_tree'
