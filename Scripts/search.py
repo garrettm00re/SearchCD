@@ -181,7 +181,7 @@ def prompt_folder_selection(options):
     # Adjust window size based on the number of items
     num_items = len(options)
     window_height = min(num_items * 50, 200)
-    width = round((400 + len(max(options, key = len)))/2) ## an average between these is probably better
+    width = round((600 + 10*(len(max(options, key = len)) - len(min(options, key = len))))/2) #
     top.geometry(f"{width}x{window_height}") #
 
     top.protocol("WM_DELETE_WINDOW", root.quit)
@@ -193,24 +193,18 @@ def select_profile():
     # Create the main window but keep it hidden
     root = tk.Tk()
     root.withdraw()
-
     # Create the top-level window
     top = tk.Toplevel(root)
     top.title("Select Terminal Profile")
     top.geometry("300x200")
-
     # Variable to store the selected profile
     selected_profile = tk.StringVar(value="")  # Initialize with empty string
-
     # Create radio buttons for each profile option
     profiles = [("Command Prompt", "cmd"),
                 ("PowerShell", "powershell"),
                 ("Bash", "bash")]
-    
-
     for text, value in profiles:
         ttk.Radiobutton(top, text=text, value=value, command =lambda v=value: update_profile(v)).pack(pady=5)
-
     # Function to handle selection
     def on_select():
         if selected_profile.get():
