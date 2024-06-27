@@ -17,10 +17,13 @@ from filelock import FileLock
 from graphviz import Digraph
 #options
 import argparse
+
 ### directory changing
-import pygetwindow as gw
-import pyautogui
-from pywinauto import Desktop
+#import pygetwindow as gw
+#import pyautogui
+#from pywinauto import Desktop
+
+from findShellWindows import change_directory_in_shell
 
 import time
 
@@ -185,8 +188,60 @@ def prompt_folder_selection(options):
     root.wait_window(top)
     return selection
 
-# Function to handle the hotkey action
+def select_profile():
+    from tkinter import ttk, messagebox
+    # Create the main window but keep it hidden
+    root = tk.Tk()
+    root.withdraw()
+
+    # Create the top-level window
+    top = tk.Toplevel(root)
+    top.title("Select Terminal Profile")
+    top.geometry("300x200")
+
+    # Variable to store the selected profile
+    selected_profile = tk.StringVar(value="")  # Initialize with empty string
+
+    # Create radio buttons for each profile option
+    profiles = [("Command Prompt", "cmd"),
+                ("PowerShell", "powershell"),
+                ("Bash", "bash")]
+    
+
+    for text, value in profiles:
+        ttk.Radiobutton(top, text=text, value=value, command =lambda v=value: update_profile(v)).pack(pady=5)
+
+    # Function to handle selection
+    def on_select():
+        if selected_profile.get():
+            top.quit()
+        else:
+            messagebox.showerror("Error", "Please select a profile")
+
+    def update_profile(value):
+        selected_profile.set(value)
+        print(f"Selected: {selected_profile.get()}") 
+
+    # Create the Select button
+    ttk.Button(top, text="Select", command=on_select).pack(pady=20)
+
+    # Run the window
+    top.protocol("WM_DELETE_WINDOW", top.quit)  # Handle window close
+    top.mainloop()
+
+    profile = selected_profile.get()
+
+    # Destroy all tkinter windows
+    root.destroy()
+
+    # Return the selected profile (or None if no selection was made)
+    return profile if profile else None
+
+
 def on_hotkey():
+    """
+    Function to handle hotkey action. This is the UI.
+    """
     root = tk.Tk()
     root.withdraw()
     folder_name = simpledialog.askstring("Input", "Enter folder name to search for:", parent=root)
@@ -196,14 +251,15 @@ def on_hotkey():
         if results:
             selected_path = prompt_folder_selection(results)
             if selected_path:
-                profile = simpledialog.askstring("Profile", "Enter terminal profile (cmd, powershell, bash):", parent=root)
-                if profile:
-                    choice = messagebox.askquestion("Navigate", "Do you want to open a new terminal window?", icon='question')
-                    if choice == 'yes':
+                choice = messagebox.askquestion("Navigate", "Do you want to open a new terminal window?", icon='question')
+                if choice == 'yes':
+                    profile = select_profile()
+                    print(profile, 'p')
+                    #profile = simpledialog.askstring("Profile", "Enter terminal profile (cmd, powershell, bash):", parent=root)
+                    if profile:
                         open_new_terminal(selected_path, profile)
-                    else:
-                        #change_directory(selected_path, profile)
-                        find_shell_CD(selected_path)
+                else:
+                    change_directory_in_shell(selected_path)
         else:
             messagebox.showinfo("Search Results", "No matching folders found.")
 
@@ -226,7 +282,7 @@ def change_directory(path, profile='cmd'):
         raise ValueError("Unsupported profile")
     
 def is_shell_window(window):
-    print(get_attr_and_methods(window))
+    #print(get_attr_and_methods(window))
     time.sleep(0.01)
     title = window.title.lower()
     shell_keywords = ['command prompt', 'powershell', 'git bash', 'bash', 'terminal', 'cmd']
@@ -234,9 +290,9 @@ def is_shell_window(window):
 
 def find_shell_CD(path):
     windows = gw.getAllWindows() # Get the list of all windows
-    shell_windows = [w for w in windows if is_shell_window(w)] # Filter the windows to get shell windows
+    shell_windows = [w for w in windows if is_shell_window(w) or w.title == 'MSYS:/c/Users/garre/OneDrive/Desktop/Projects/SearchCD-Project/SearchCD'] # Filter the windows to get shell windows
+    titles = [w.title for w in windows]
     if shell_windows:
-        print('hello')
         shell_window = shell_windows[0] 
         shell_window.activate() # Activate the most recently active shell window
         time.sleep(0.5) # wait for the window to activate
@@ -264,7 +320,6 @@ def open_new_terminal(path, profile):
 def get_attr_and_methods(obj):
     # Get a list of all attributes and methods of the object
     attributes_and_methods = dir(obj)
-    # Separate attributes and methods
     attributes = []
     methods = []
     for name in attributes_and_methods:
@@ -273,7 +328,7 @@ def get_attr_and_methods(obj):
             methods.append(name)
         else:
             attributes.append(name)
-    return 'ATTRIBUTES: \n', attributes, '\n METHODS: \n', methods
+    return f"ATTRIBUTES: \n{attributes} \n\nMETHODS: \n {methods}"
 #######
 json_file = 'directory_tree.json'
 graph_file = 'directory_tree'
@@ -291,7 +346,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--visualization', action='store_true', help='Enable visualization')
     args = parser.parse_args()
     ###
-    with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
+    with open("./JSON-Files/AlgorithmAttributes.json", 'r') as f:
         algoAttr = json.load(f)
     json_tree = algoAttr["tree"] 
     tree_lock = algoAttr["tree.lock"]

@@ -125,7 +125,7 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
     observer.start()
     try:
         while True:
-            time.sleep(0.1)  # Keep the script running
+            time.sleep(5)  # Keep the script running, experiment with different sleep settings
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
@@ -146,11 +146,11 @@ def build_tree(path):
                 try:
                     tree["children"].append(future.result())
                 except PermissionError:
-                    pass  # Silently handle permission errors
+                    pass
                 except Exception as e:
                     print(f"Error processing {full_path}: {e}")
     except PermissionError:
-        pass  # Silently handle permission errors
+        pass
     except Exception as e:
         print(f"Error accessing {path}: {e}")
     return tree
@@ -209,7 +209,7 @@ def main():
 
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
 
-root = r"C:\Users\garre" #\OneDrive\Desktop\Projects\SearchCD-Project #r"C:\\" # #r"C:\Users\garre\OneDrive"
+root = r"C:\Users\garre" #\OneDrive\Desktop\Projects\SearchCD-Project #r"C:\\" # #r"C:\Users\garre\OneDrive" #
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
     algoAttr = json.load(f)
 json_file = algoAttr["tree"]
