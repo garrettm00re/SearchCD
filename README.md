@@ -1,18 +1,18 @@
 # SearchCD
 Forgot that directory name? Simply search, select, and automatically cd.
 
-Getting Started:
+## Getting Started:
   pull
-  pip install requirements.txt
-  python3 Scripts/setup.py ## this makes the program run on start
+  ```pip install requirements.txt```
+  ```python3 Scripts/setup.py``` ## this makes the program run on bootup, and immediately after execution
   check for explosions
   
-Notes:
+## Notes:
   hotkey for searching is currently ctrl+g
   reduce max_workers to chew less RAM
   File tree & trie construction takes a bit of time. Search operations may fail if you search quickly after executing setup.py
 
-Iminent Changes:
+## Iminent Changes:
   Mac functionality
   search by files
 
