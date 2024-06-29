@@ -1,12 +1,11 @@
 # SearchCD
 Forgot that directory name? Simply search, select, and automatically cd.
 
-### 1. Getting Started:
-  ```git clone https://github.com/yourusername/projectname.git
-    cd projectname
-  ```
-  ```pip install requirements.txt```
-  ```python3 Scripts/setup.py``` ## this makes the program run on bootup, and immediately after execution
+### Installation:
+  1. ```git clone https://github.com/yourusername/projectname.git```
+  2.  ```cd projectname```
+  3. ```pip install -r requirements.txt```
+  4. ```python3 Scripts/setup.py``` ## this makes the program run on bootup, and immediately after execution
   check for explosions
   
 ### 2. Notes:
