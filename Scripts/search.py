@@ -9,24 +9,28 @@ import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 from tkinter import simpledialog, messagebox, Listbox, Label, Scrollbar, VERTICAL, RIGHT, Y, BOTH, SINGLE
+from tkinter import ttk, messagebox
 
+### opening terminal windows // changing directories
 import subprocess
+from findShellWindows import change_directory_in_shell
+
+# generally useful
 import os
+import time
+
+#ensure it's not possible for 2+ threads to read/write storage files
 from filelock import FileLock
+
 #visualization
 from graphviz import Digraph
-#options
 import argparse
+
 
 ### directory changing
 #import pygetwindow as gw
 #import pyautogui
 #from pywinauto import Desktop
-
-from findShellWindows import change_directory_in_shell
-
-import time
-
 def read_json_tree():
     # Load the directory tree from the JSON file
     lock = FileLock(tree_lock)
@@ -124,16 +128,12 @@ def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##t
     ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
     return ts_top_results
 
-#useless as of now
-#def prune_trie_search(trie_search,  max_results = 5) -> list:
-#    #should show only the most relevant search results
-#    ts_with_edits = sorted([(k, v) for k, v in trie_search.items()], key = lambda x: x[1]) ## sort the results by number of edits used
-#    ts_pruned = []
-#    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_number_results]
-
-
 ### Trie visualization (use for small directory tree/trie only)
 def visualize_trie(trie):
+    """
+    Visualize the trie as a png image. Depending on the computer, this file will likely be super large
+    so it's best to split the file (though this method does not do that)
+    """
     def add_nodes(graph, node, prefix):
         for char, child in node.children.items():
             node_name = prefix + char
@@ -151,6 +151,9 @@ def visualize_trie(trie):
 
 # Function to prompt user to select a folder from a list
 def prompt_folder_selection(options):
+    """
+    User interface for the folder selection menu (search result selection)
+    """
     root = tk.Tk()
     root.withdraw()
     selection = None
@@ -166,70 +169,51 @@ def prompt_folder_selection(options):
     # Listbox with scrollbar
     frame = tk.Frame(top)
     frame.pack(fill=BOTH, expand=True)
-
     scrollbar = Scrollbar(frame, orient=VERTICAL)
     listbox = Listbox(frame, selectmode=SINGLE, yscrollcommand=scrollbar.set)
     scrollbar.config(command=listbox.yview)
     scrollbar.pack(side=RIGHT, fill=Y)
     listbox.pack(fill=BOTH, expand=True)
-
     for option in options:
         listbox.insert(tk.END, option)
-
     listbox.bind('<<ListboxSelect>>', on_select)
-
     # Adjust window size based on the number of items
     num_items = len(options)
     window_height = min(num_items * 50, 200)
     width = round((600 + 10*(len(max(options, key = len)) - len(min(options, key = len))))/2) #
     top.geometry(f"{width}x{window_height}") #
-
     top.protocol("WM_DELETE_WINDOW", root.quit)
     root.wait_window(top)
     return selection
 
 def select_profile():
-    from tkinter import ttk, messagebox
-    # Create the main window but keep it hidden
-    root = tk.Tk()
-    root.withdraw()
-    # Create the top-level window
-    top = tk.Toplevel(root)
-    top.title("Select Terminal Profile")
-    top.geometry("300x200")
-    # Variable to store the selected profile
-    selected_profile = tk.StringVar(value="")  # Initialize with empty string
-    # Create radio buttons for each profile option
-    profiles = [("Command Prompt", "cmd"),
-                ("PowerShell", "powershell"),
-                ("Bash", "bash")]
-    for text, value in profiles:
-        ttk.Radiobutton(top, text=text, value=value, command =lambda v=value: update_profile(v)).pack(pady=5)
-    # Function to handle selection
-    def on_select():
+    """
+    In case user wants to select a shell
+    """
+    def on_select(): # Function to handle selection
         if selected_profile.get():
             top.quit()
         else:
             messagebox.showerror("Error", "Please select a profile")
-
     def update_profile(value):
         selected_profile.set(value)
         print(f"Selected: {selected_profile.get()}") 
 
-    # Create the Select button
-    ttk.Button(top, text="Select", command=on_select).pack(pady=20)
-
-    # Run the window
+    root = tk.Tk() # Create the main window but keep it hidden
+    root.withdraw()
+    top = tk.Toplevel(root) # Create the top-level window
+    top.title("Select Terminal Profile")
+    top.geometry("300x200")
+    selected_profile = tk.StringVar(value="")  # Variable to store the selected profile
+    profiles = [("Command Prompt", "cmd"), ("PowerShell", "powershell"), ("Bash", "bash")]
+    for text, value in profiles: # Create radio buttons for each profile option
+        ttk.Radiobutton(top, text=text, value=value, command =lambda v=value: update_profile(v)).pack(pady=5)
+    ttk.Button(top, text="Select", command=on_select).pack(pady=20)# Create the Select button
     top.protocol("WM_DELETE_WINDOW", top.quit)  # Handle window close
     top.mainloop()
-
     profile = selected_profile.get()
-
-    # Destroy all tkinter windows
-    root.destroy()
-
-    # Return the selected profile (or None if no selection was made)
-    return profile if profile else None
+    root.destroy() # Destroy all tkinter windows
+    return profile
 
 
 def on_hotkey():
@@ -256,11 +240,74 @@ def on_hotkey():
                     change_directory_in_shell(selected_path)
         else:
             messagebox.showinfo("Search Results", "No matching folders found.")
-
     root.destroy()
 
-# Function to change directory in the active terminal
+def open_new_terminal(path, profile):
+    """
+    Does as described, Unix/Mac support likely doesn't work, haven't been able to test/confirm.
+    """
+    if os.name == 'nt':  # Windows
+        if profile == 'cmd':
+            subprocess.run(['start', 'cmd', '/K', f'cd /d {path}'], shell=True)
+        elif profile == 'powershell':
+            subprocess.run(['powershell', '-NoExit', '-Command', f'Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd {path}"'], shell=True)
+        elif profile == 'bash':
+            bash_path = r'C:\Program Files\Git\git-bash.exe' ### hardcoded, should ask for user input
+            subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
+        else:
+            raise ValueError("Unsupported profile")
+    else:  # Unix/Linux/Mac
+        subprocess.run(['gnome-terminal', '--', 'bash', '-c', f'cd {path}; exec bash'])
+
+### UTILITY
+def get_attr_and_methods(obj):
+    """
+    Get a list of all attributes and methods of the object
+    """
+    attributes_and_methods = dir(obj)
+    attributes = []
+    methods = []
+    for name in attributes_and_methods:
+        attr = getattr(obj, name)
+        if callable(attr):
+            methods.append(name)
+        else:
+            attributes.append(name)
+    return f"ATTRIBUTES: \n{attributes} \n\nMETHODS: \n {methods}"
+
+if __name__ == "__main__":
+    """
+    MAIN "FUNCTION" (not a function because I'd have to rewrite things to changes to global scope (I guess I could just make things nonlocal))
+    builds the trie for searching from the directory tree
+    listens for the hotkey
+    """
+    parser = argparse.ArgumentParser(description='Monitor directory and update tree in real-time.')
+    parser.add_argument('-v', '--visualization', action='store_true', help='Enable visualization') ## add -v for visualization
+    args = parser.parse_args()
+    with open("./JSON-Files/AlgorithmAttributes.json", 'r') as f:
+        algoAttr = json.load(f)
+    json_tree = algoAttr["tree"] ##load file names...
+    tree_lock = algoAttr["tree.lock"]
+    json_trie = algoAttr["trie"]
+    trie_lock = algoAttr["trie.lock"]
+    tree = read_json_tree()
+    trie = Trie()
+    build_trie_from_tree(tree, trie)
+    if args.visualization:
+        graph = visualize_trie(trie)
+        graph.render('../Visualizations/trie', format='png', view=True)
+    keyboard.add_hotkey('ctrl+g', on_hotkey) # if ctrl g is pressed -> call on_hotkey()
+    print('ready for action')
+    keyboard.wait('esc') # Keep the script running
+
+
+####################### DEPRECATED METHODS #######################
+
 def change_directory(path, profile='cmd'):
+    """
+    Function to change directory in the active terminal
+    DOES NOT WORK PROPERLY
+    """
     print(path)
     if profile == 'cmd':
         os.system(f'cd /d {path}')
@@ -276,15 +323,20 @@ def change_directory(path, profile='cmd'):
         raise ValueError("Unsupported profile")
     
 def is_shell_window(window):
-    #print(get_attr_and_methods(window))
+    """
+    DOES NOT WORK PROPERLY, the title attr of windows objects returned by pygetwindow is not the best
+    """
     time.sleep(0.01)
     title = window.title.lower()
     shell_keywords = ['command prompt', 'powershell', 'git bash', 'bash', 'terminal', 'cmd']
     return any(keyword in title for keyword in shell_keywords) #and window.isActive 
 
 def find_shell_CD(path):
+    """
+    DOES NOT WORK PROPERLY, is_shell_window doesn't work and thus this method is broken
+    """
     windows = gw.getAllWindows() # Get the list of all windows
-    shell_windows = [w for w in windows if is_shell_window(w) or w.title == 'MSYS:/c/Users/garre/OneDrive/Desktop/Projects/SearchCD-Project/SearchCD'] # Filter the windows to get shell windows
+    shell_windows = [w for w in windows if is_shell_window(w) ] #Filter the windows to get shell windows
     titles = [w.title for w in windows]
     if shell_windows:
         shell_window = shell_windows[0] 
@@ -295,65 +347,10 @@ def find_shell_CD(path):
     else:
         print("No active shell windows found.")
 
-# Function to open a new terminal window
-def open_new_terminal(path, profile):
-    if os.name == 'nt':  # Windows
-        if profile == 'cmd':
-            subprocess.run(['start', 'cmd', '/K', f'cd /d {path}'], shell=True)
-        elif profile == 'powershell':
-            subprocess.run(['powershell', '-NoExit', '-Command', f'Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd {path}"'], shell=True)
-        elif profile == 'bash':
-            bash_path = r'C:\Program Files\Git\git-bash.exe'
-            subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
-        else:
-            raise ValueError("Unsupported profile")
-    else:  # Unix/Linux/Mac
-        subprocess.run(['gnome-terminal', '--', 'bash', '-c', f'cd {path}; exec bash'])
-
-### UTILITY
-def get_attr_and_methods(obj):
-    # Get a list of all attributes and methods of the object
-    attributes_and_methods = dir(obj)
-    attributes = []
-    methods = []
-    for name in attributes_and_methods:
-        attr = getattr(obj, name)
-        if callable(attr):
-            methods.append(name)
-        else:
-            attributes.append(name)
-    return f"ATTRIBUTES: \n{attributes} \n\nMETHODS: \n {methods}"
-#######
-json_file = 'directory_tree.json'
-graph_file = 'directory_tree'
-lock_file = 'directory_tree.json.lock'
-
-#trie_json = 'trie.json'
-#trie_graphviz = 'trie'
-#trie_lock = 'trie.json.lock'
-
-
-if __name__ == "__main__":
-    print('hello')
-    # Load the directory tree and build the Trie
-    parser = argparse.ArgumentParser(description='Monitor directory and update tree in real-time.')
-    parser.add_argument('-v', '--visualization', action='store_true', help='Enable visualization')
-    args = parser.parse_args()
-    ###
-    with open("./JSON-Files/AlgorithmAttributes.json", 'r') as f:
-        algoAttr = json.load(f)
-    json_tree = algoAttr["tree"] 
-    tree_lock = algoAttr["tree.lock"]
-    json_trie = algoAttr["trie"]
-    trie_lock = algoAttr["trie.lock"]
-    ####
-    tree = read_json_tree()
-    trie = Trie()
-    build_trie_from_tree(tree, trie)
-    if args.visualization:
-        graph = visualize_trie(trie)
-        graph.render('../Visualizations/trie', format='png', view=True)
-    # Set up the hotkey (Ctrl+G)
-    keyboard.add_hotkey('ctrl+g', on_hotkey) # if ctrl g is pressed -> call on_hotkey()
-    print('ready for action')
-    keyboard.wait('esc') # Keep the script running
+def prune_trie_search(trie_search,  max_results = 5) -> list:
+   """
+   I don't even know why I made this
+   """
+   ts_with_edits = sorted([(k, v) for k, v in trie_search.items()], key = lambda x: x[1]) ## sort the results by number of edits used
+   ts_pruned = []
+   ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
