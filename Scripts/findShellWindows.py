@@ -74,9 +74,3 @@ def change_directory_in_shell(path, debug = False):
         time.sleep(0.2)
     else:
         print("No active shell windows found.")
-
-# Specify the path you want to change to
-#new_path = r'C:/'
-
-# Call the function
-#change_directory_in_shell(new_path)

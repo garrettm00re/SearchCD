@@ -1,0 +1,9 @@
+filelock==3.15.4
+graphviz==0.20.3
+keyboard==0.13.5
+objgraph==3.6.1
+psutil==5.9.8
+PyAutoGUI==0.9.54
+PyGetWindow==0.0.9
+pywin32==306
+watchdog==4.0.1

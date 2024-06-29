@@ -209,7 +209,7 @@ def main():
 
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
 
-root = r"C:\Users\garre" #\OneDrive\Desktop\Projects\SearchCD-Project #r"C:\\" # #r"C:\Users\garre\OneDrive" #
+root = r"C:"
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
     algoAttr = json.load(f)
 json_file = algoAttr["tree"]

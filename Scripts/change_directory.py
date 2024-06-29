@@ -1,4 +1,5 @@
 import os
+## Currently irrelevant function
 
 def generate_cd_command():
     path = input("Please enter the path to change to: ")

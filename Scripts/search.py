@@ -1,36 +1,25 @@
 #read/write json
 import json
-
 #hotkey setup
 import keyboard 
-
 #user interface
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 from tkinter import simpledialog, messagebox, Listbox, Label, Scrollbar, VERTICAL, RIGHT, Y, BOTH, SINGLE
 from tkinter import ttk, messagebox
-
 ### opening terminal windows // changing directories
 import subprocess
 from findShellWindows import change_directory_in_shell
-
 # generally useful
 import os
 import time
-
 #ensure it's not possible for 2+ threads to read/write storage files
 from filelock import FileLock
-
 #visualization
 from graphviz import Digraph
 import argparse
 
-
-### directory changing
-#import pygetwindow as gw
-#import pyautogui
-#from pywinauto import Desktop
 def read_json_tree():
     # Load the directory tree from the JSON file
     lock = FileLock(tree_lock)
@@ -277,7 +266,7 @@ def get_attr_and_methods(obj):
 
 if __name__ == "__main__":
     """
-    MAIN "FUNCTION" (not a function because I'd have to rewrite things to changes to global scope (I guess I could just make things nonlocal))
+    MAIN "FUNCTION" (making this a function would affect global scope which could be combated with use of nonlocal)
     builds the trie for searching from the directory tree
     listens for the hotkey
     """
@@ -300,9 +289,9 @@ if __name__ == "__main__":
     print('ready for action')
     keyboard.wait('esc') # Keep the script running
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ####################### DEPRECATED METHODS #######################
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 def change_directory(path, profile='cmd'):
     """
     Function to change directory in the active terminal
