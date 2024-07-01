@@ -114,7 +114,7 @@ def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##t
     if parent:
         ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
     ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
-    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results]
+    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results or result[1] == 0]
     return ts_top_results
 
 ### Trie visualization (use for small directory tree/trie only)
@@ -273,13 +273,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Monitor directory and update tree in real-time.')
     parser.add_argument('-v', '--visualization', action='store_true', help='Enable visualization') ## add -v for visualization
     args = parser.parse_args()
+    
     with open("./JSON-Files/AlgorithmAttributes.json", 'r') as f:
         algoAttr = json.load(f)
     json_tree = algoAttr["tree"] ##load file names...
     tree_lock = algoAttr["tree.lock"]
     json_trie = algoAttr["trie"]
     trie_lock = algoAttr["trie.lock"]
-    tree = read_json_tree()
+
+    tree = None
+    while not tree:
+        try:
+            tree = read_json_tree()
+        except Exception as e:
+            time.sleep(10)
+            print(e, 'e', 'tree cannot be read due to some error')
     trie = Trie()
     build_trie_from_tree(tree, trie)
     if args.visualization:

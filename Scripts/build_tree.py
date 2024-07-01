@@ -41,13 +41,10 @@ class TreeEventHandler(FileSystemEventHandler):
     ### CORE LOGIC
 
     def update_json_tree(self, action, event = None, src = None, dest = None):
+        """
+        
+        """
         tree = read_json_tree()
-        
-        #src_parts = src.split(os.sep)
-        #dest_parts = None
-        #if action == "moved":
-        #    dest_parts = dest.split(os.sep)
-        
         tree, updated = self.modify_python_tree(tree, src, action, dest)
         if updated:
             if event and action == 'remove': ## here just for consistency in looking from the terminal
@@ -63,7 +60,8 @@ class TreeEventHandler(FileSystemEventHandler):
         """
         Modifies the file tree for the appropriate action. Important nuance: this function is responsible
         for checking if a remove operation is necessary
-        """      
+        """  
+        #print(tree["name"] + 'NAME', str(src) + "  SRC")  
         src = self.trim_tree(tree, src)
         if dest:
             dest = self.trim_tree(tree, dest)
@@ -132,9 +130,13 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
 
 ### TREE CREATION
 
-def build_tree(path):   
+def build_tree(path):
+    """
+    Parallelized function for building the tree from a base path. This tree will be read into json format for easy interconversion between storage and variable
+    """
     tree = {"name": os.path.basename(path), "path": path, "children": []}
-    #print(tree["name"], tree['path'])
+    if tree["name"] is None:
+        print(path)
     try:
         with ThreadPoolExecutor(max_workers=16) as executor:  # Adjust max_workers as needed
             futures = []
@@ -156,6 +158,9 @@ def build_tree(path):
     return tree
 
 def add_nodes(graph, tree):
+    """
+    visualizing the tree using graphviz
+    """
     node_id = str(hash(tree["path"].replace("\\", "/")))
     graph.node(node_id, label=tree["name"], fontsize="10")
     for child in tree["children"]:
@@ -195,8 +200,10 @@ def main():
     args = parser.parse_args()
     if args.build:
         directory_tree = build_tree(root)
-        with open(json_file, "w") as f:
-            json.dump(directory_tree, f, indent=2)
+        lock = FileLock(lock_file)
+        with lock:
+            with open(json_file, "w") as f:
+                json.dump(directory_tree, f, indent=2)
         del directory_tree
         if args.visualization:
             graph = create_graph(directory_tree)
@@ -209,8 +216,9 @@ def main():
 
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
 
-root = r"C:"
+root = r"C:\\"
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
+
     algoAttr = json.load(f)
 json_file = algoAttr["tree"]
 lock_file = algoAttr["tree.lock"]
