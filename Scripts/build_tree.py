@@ -138,7 +138,7 @@ def build_tree(path):
     if tree["name"] is None:
         print(path)
     try:
-        with ThreadPoolExecutor(max_workers=16) as executor:  # Adjust max_workers as needed
+        with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust max_workers as needed
             futures = []
             for entry in os.listdir(path):
                 full_path = os.path.join(path, entry)
@@ -204,20 +204,19 @@ def main():
         with lock:
             with open(json_file, "w") as f:
                 json.dump(directory_tree, f, indent=2)
-        del directory_tree
-        if args.visualization:
-            graph = create_graph(directory_tree)
-            graph.render(graph_file, format='svg', view = True)
-
+        with open('tree_built.info', 'w') as f:
+            f.write('True') ## communicates to search loop that it's time to update the trie
     if args.visualization:
         directory_tree = read_json_tree() if not args.build else directory_tree
         graph = create_graph(directory_tree)
         graph.render(graph_file, format='svg', view = True)
-
+    del directory_tree
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
+### global
 r = os.path.abspath(os.getcwd())
-ro = r.split(os.sep) + '\\'
-root = ro #= r"C:\\"
+root = r.split(os.sep)[0] + '\\\\' ## 
+#print(root, r.split(os.sep)[0])
+#root = ro #= r"C:\\"
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
     algoAttr = json.load(f)
 json_file = algoAttr["tree"]

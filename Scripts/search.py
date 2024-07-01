@@ -11,6 +11,7 @@ from tkinter import ttk, messagebox
 ### opening terminal windows // changing directories
 import subprocess
 from findShellWindows import change_directory_in_shell
+from findShellWindows import open_new_terminal ### change name of findShellWindows
 # generally useful
 import os
 import time
@@ -113,15 +114,13 @@ def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##t
     ts = trie.search_fuzzy(name, max_edits = max_edits)
     if parent:
         ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
-    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: -x[1]) ## sort the results by number of edits used
-    #print(ts_with_edits)
+    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
+    print(ts_with_edits)
+    print("TS WITH EDITS \n")
     ts_top_results = []#[result[0] for i, result in enumerate(ts_with_edits) if i < max_results or (result[1] == 0 and i < 2* max_results)] # return only max_results, or up to 2x max_results if 0-edit words occur
     for i, result in enumerate(ts_with_edits):
         if i < max_results or (result[1] == 0 and i < 2 * max_results):
-            ts_top_results.append(result)
-        else:
-            print(result[1] == 0)
-            print(i < 2 * max_results)
+            ts_top_results.append(result[0])
     return ts_top_results
 
 ### Trie visualization (use for small directory tree/trie only)
@@ -174,14 +173,16 @@ def prompt_folder_selection(options):
     scrollbar.config(command=listbox.yview)
     scrollbar.pack(side=RIGHT, fill=Y)
     listbox.pack(fill=BOTH, expand=True)
+    print('\nOPTIONS\n')
     for option in options:
+        print(option)
         listbox.insert(tk.END, option)
     listbox.bind('<<ListboxSelect>>', on_select)
     #listbox.bind('<Control-c>', copy_to_clipboard)  # Bind Ctrl+C to copy to clipboard
 
     num_items = len(options) # Adjust window size based on the number of items
-    window_height = num_items * 75
-    width = round((600 + 10*(len(max(options, key = len)) + len(min(options, key = len))))/2) #
+    window_height = num_items * 9
+    width = round((600 + 9*(len(max(options, key = len)) + len(min(options, key = len))))/2) #
     top.geometry(f"{width}x{window_height}") ##
     top.protocol("WM_DELETE_WINDOW", root.quit)
     root.wait_window(top)
@@ -243,23 +244,6 @@ def on_hotkey():
             messagebox.showinfo("Search Results", "No matching folders found.")
     root.destroy()
 
-def open_new_terminal(path, profile):
-    """
-    Does as described, Unix/Mac support likely doesn't work, haven't been able to test/confirm.
-    """
-    if os.name == 'nt':  # Windows
-        if profile == 'cmd':
-            subprocess.run(['start', 'cmd', '/K', f'cd /d {path}'], shell=True)
-        elif profile == 'powershell':
-            subprocess.run(['powershell', '-NoExit', '-Command', f'Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd {path}"'], shell=True)
-        elif profile == 'bash':
-            bash_path = r'C:\Program Files\Git\git-bash.exe' ### hardcoded, should ask for user input
-            subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
-        else:
-            raise ValueError("Unsupported profile")
-    else:  # Unix/Linux/Mac
-        subprocess.run(['gnome-terminal', '--', 'bash', '-c', f'cd {path}; exec bash'])
-
 ### UTILITY
 def get_attr_and_methods(obj):
     """
@@ -294,13 +278,13 @@ if __name__ == "__main__":
     trie_lock = algoAttr["trie.lock"]
 
     tree = None
-    while not tree:
+    while not tree: #wait for a tree to be built before reading one
         try:
             tree = read_json_tree()
         except Exception as e:
             time.sleep(10)
-            print(e, 'e', 'tree cannot be read due to some error')
-    trie = Trie()
+            print(e, 'e', 'tree cannot be read, this is likely because the script is running for the first time. If so, please wait')
+    trie = Trie()   
     build_trie_from_tree(tree, trie)
     if args.visualization:
         graph = visualize_trie(trie)
@@ -309,9 +293,19 @@ if __name__ == "__main__":
     print('ready for action')
     keyboard.wait('esc') # Keep the script running
 
+    #### update the trie if the tree has been built
+    print('reached') #not sure if it will be
+    while not os.path.exists("tree_built.info"):
+        time.sleep(3)
+    tree = read_json_tree()
+    trie = Trie()
+    build_trie_from_tree(tree, trie)
+    os.remove("tree_built.info")
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ####################### DEPRECATED METHODS #######################
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
 def change_directory(path, profile='cmd'):
     """
     Function to change directory in the active terminal

@@ -6,6 +6,8 @@ import win32process
 import win32api
 import win32con
 import psutil
+import subprocess
+import os
 
 def get_window_title(hwnd):
     return win32gui.GetWindowText(hwnd)
@@ -74,3 +76,20 @@ def change_directory_in_shell(path, debug = False):
         time.sleep(0.2)
     else:
         print("No active shell windows found.")
+
+def open_new_terminal(path, profile):
+    """
+    Does as described, Unix/Mac support likely doesn't work, haven't been able to test/confirm.
+    """
+    if os.name == 'nt':  # Windows
+        if profile == 'cmd':
+            subprocess.run(['start', 'cmd', '/K', f'cd /d {path}'], shell=True)
+        elif profile == 'powershell':
+            subprocess.run(['powershell', '-NoExit', '-Command', f'Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd {path}"'], shell=True)
+        elif profile == 'bash':
+            bash_path = r'C:\Program Files\Git\git-bash.exe' ### hardcoded, should ask for user input
+            subprocess.Popen([bash_path, '-c', f'cd "{path}" && exec bash'])
+        else:
+            raise ValueError("Unsupported profile")
+    else:  # Unix/Linux/Mac
+        subprocess.run(['gnome-terminal', '--', 'bash', '-c', f'cd {path}; exec bash'])
