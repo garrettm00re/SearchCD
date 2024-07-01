@@ -3,10 +3,10 @@ Forgot that directory name? Simply search, select, and automatically cd.
 
 ### Installation:
    ```
-   git clone https://github.com/yourusername/projectname.git
+   git clone https://github.com/garrettm00re/searchCD.git
    ```
    ```
-   cd projectname
+   cd searchCD
    ```
    ```
    pip install -r requirements.txt
@@ -16,12 +16,12 @@ Forgot that directory name? Simply search, select, and automatically cd.
    ```
   check for explosions
   
-### 2. Notes:
+### Notes:
   - hotkey for searching is currently ctrl+g
   - reduce max_workers to chew less RAM
   - File tree & trie construction takes a bit of time. Search operations may fail if you search quickly after executing setup.py
 
-### 3. Iminent Changes:
+### Iminent Changes:
   - Mac functionality
   - search by files
 
