@@ -215,10 +215,10 @@ def main():
         graph.render(graph_file, format='svg', view = True)
 
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
-
-root = r"C:\\"
+r = os.path.abspath(os.getcwd())
+ro = r.split(os.sep) + '\\'
+root = ro #= r"C:\\"
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
-
     algoAttr = json.load(f)
 json_file = algoAttr["tree"]
 lock_file = algoAttr["tree.lock"]

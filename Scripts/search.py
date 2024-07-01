@@ -89,7 +89,7 @@ class Trie:
             if idx == len(word):
                 if node.is_end_of_word and edits <= max_edits:
                     for p in node.path:
-                        results[p] = edits # no duplicates this way
+                        results[p] = edits if p not in results or edits < results[p] else results[p]# no duplicates this way
                 return
             if word[idx] in node.children:
                 search_recursive(node.children[word[idx]], word, idx + 1, edits) # exact match 
@@ -113,8 +113,15 @@ def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##t
     ts = trie.search_fuzzy(name, max_edits = max_edits)
     if parent:
         ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
-    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
-    ts_top_results = [result[0] for i, result in enumerate(ts_with_edits) if i < max_results or result[1] == 0]
+    ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: -x[1]) ## sort the results by number of edits used
+    #print(ts_with_edits)
+    ts_top_results = []#[result[0] for i, result in enumerate(ts_with_edits) if i < max_results or (result[1] == 0 and i < 2* max_results)] # return only max_results, or up to 2x max_results if 0-edit words occur
+    for i, result in enumerate(ts_with_edits):
+        if i < max_results or (result[1] == 0 and i < 2 * max_results):
+            ts_top_results.append(result)
+        else:
+            print(result[1] == 0)
+            print(i < 2 * max_results)
     return ts_top_results
 
 ### Trie visualization (use for small directory tree/trie only)
@@ -149,7 +156,11 @@ def prompt_folder_selection(options):
     def on_select(event):
         nonlocal selection
         selection = listbox.get(listbox.curselection())
+        root.clipboard_clear()
+        root.clipboard_append(selection) ## add path to clipboard
+        root.update()
         top.destroy()
+
     top = tk.Toplevel(root)
     top.title("Select Folder")
     # Header
@@ -166,11 +177,12 @@ def prompt_folder_selection(options):
     for option in options:
         listbox.insert(tk.END, option)
     listbox.bind('<<ListboxSelect>>', on_select)
-    # Adjust window size based on the number of items
-    num_items = len(options)
-    window_height = min(num_items * 50, 200)
-    width = round((600 + 10*(len(max(options, key = len)) - len(min(options, key = len))))/2) #
-    top.geometry(f"{width}x{window_height}") #
+    #listbox.bind('<Control-c>', copy_to_clipboard)  # Bind Ctrl+C to copy to clipboard
+
+    num_items = len(options) # Adjust window size based on the number of items
+    window_height = num_items * 75
+    width = round((600 + 10*(len(max(options, key = len)) + len(min(options, key = len))))/2) #
+    top.geometry(f"{width}x{window_height}") ##
     top.protocol("WM_DELETE_WINDOW", root.quit)
     root.wait_window(top)
     return selection
