@@ -115,8 +115,8 @@ def search_folders(trie, name, max_edits = 3, max_results = 5, parent=None): ##t
     if parent:
         ts = {path : edits for path, edits in ts.items() if parent.lower() in path.lower().split('\\')} #prune by parent folder
     ts_with_edits = sorted([(k, v) for k, v in ts.items()], key = lambda x: x[1]) ## sort the results by number of edits used
-    print(ts_with_edits)
-    print("TS WITH EDITS \n")
+    #print(ts_with_edits)
+    #print("TS WITH EDITS \n")
     ts_top_results = []#[result[0] for i, result in enumerate(ts_with_edits) if i < max_results or (result[1] == 0 and i < 2* max_results)] # return only max_results, or up to 2x max_results if 0-edit words occur
     for i, result in enumerate(ts_with_edits):
         if i < max_results or (result[1] == 0 and i < 2 * max_results):
@@ -173,15 +173,15 @@ def prompt_folder_selection(options):
     scrollbar.config(command=listbox.yview)
     scrollbar.pack(side=RIGHT, fill=Y)
     listbox.pack(fill=BOTH, expand=True)
-    print('\nOPTIONS\n')
+    #print('\nOPTIONS\n')
     for option in options:
-        print(option)
+        #print(option)
         listbox.insert(tk.END, option)
     listbox.bind('<<ListboxSelect>>', on_select)
     #listbox.bind('<Control-c>', copy_to_clipboard)  # Bind Ctrl+C to copy to clipboard
 
     num_items = len(options) # Adjust window size based on the number of items
-    window_height = num_items * 9
+    window_height = num_items * 42
     width = round((600 + 9*(len(max(options, key = len)) + len(min(options, key = len))))/2) #
     top.geometry(f"{width}x{window_height}") ##
     top.protocol("WM_DELETE_WINDOW", root.quit)
@@ -234,7 +234,7 @@ def on_hotkey():
                 choice = messagebox.askquestion("Navigate", "Do you want to open a new terminal window?", icon='question')
                 if choice == 'yes':
                     profile = select_profile()
-                    print(profile, 'p')
+                    #print(profile, 'p')
                     #profile = simpledialog.askstring("Profile", "Enter terminal profile (cmd, powershell, bash):", parent=root)
                     if profile:
                         open_new_terminal(selected_path, profile)
@@ -291,16 +291,18 @@ if __name__ == "__main__":
         graph.render('../Visualizations/trie', format='png', view=True)
     keyboard.add_hotkey('ctrl+g', on_hotkey) # if ctrl g is pressed -> call on_hotkey()
     print('ready for action')
-    keyboard.wait('esc') # Keep the script running
 
     #### update the trie if the tree has been built
     print('reached') #not sure if it will be
     while not os.path.exists("tree_built.info"):
         time.sleep(3)
+    print('updating tree')
     tree = read_json_tree()
     trie = Trie()
     build_trie_from_tree(tree, trie)
     os.remove("tree_built.info")
+    print('tree updated')
+    keyboard.wait('esc') # Keep the script running
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ####################### DEPRECATED METHODS #######################
