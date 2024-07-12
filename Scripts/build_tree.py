@@ -130,7 +130,7 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
     observer.join()
 
 ### TREE CREATION
-
+kbi, ct = False, 0
 def build_tree(path, debug = False): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
     """
     Parallelized function for building the tree from a base path. This tree will be read into json format for easy interconversion between storage and variable
@@ -141,39 +141,34 @@ def build_tree(path, debug = False): ### do UNIX systems not have a file TREE bu
     # figure out how to do the keyboard interrupt thing
     #message shreyas, distributed computing is pretty cool
     ### what is an unbound variable!!!!!!
-    # determine whether of not UNIX systems not have a file TREE or cyclic file GRAPH
-    global kbi, ct
-    kbi, ct = False, 0
+    visited = set()
+    print_lock = threading.Lock()
+    kbi_event = threading.Event()
     def explorer(path):
-        nonlocal debug
-        global kbi, ct
-        if 'kbi' in globals() and globals()['kbi']: ##short circuit if keyboard interrupt is detected in any thread (doesn't work?)
-            print('kbi detected, quitting execution')
-            return
+        global ct, kbi
         tree = {"name": os.path.basename(path), "path": path, "children": []}
         if tree["name"] is None:
             print(path)
         #nonlocal ct ## why do I need this
         if ct % 10000 == 0 and debug: ##debugging
-            procThread = 0 # number of threads currently working on building the tree (at least that's what it's supposed to be)
-            for t in threading.enumerate():
-                if 'tree-build' in t.name:
-                    procThread += 1
-            #### the output resulting from the following print statements is disgusting, should use lock aquire stuff
-            print('=====================')
-            print(f'Number of nodes that have finished? executing {ct}')
-            print(f"Number of threads executing this process: {procThread}")
-            print(f"active threading count: {threading.active_count()}")
-            print('=====================')
+            with print_lock:
+                print('=====================')
+                print(f"kbi: {kbi_event.is_set()}")
+                print(f'Number of nodes that have finished executing: {ct}')
+                print(f"active threading count: {threading.active_count()}")
+                print('=====================')
+        if kbi_event.is_set():# #short circuit if keyboard interrupt is detected in any thread (doesn't work?)
+            print('kbi detected, quitting execution')
+            return
         try:
-            ## confused how max_workers and num active threads are related
-            with ThreadPoolExecutor(max_workers=16, thread_name_prefix = 'tree-build') as executor:  # Adjust max_workers as needed
-                #print(threading.active_count()) #returns the total number of active threads in the current Python process
+            mw = max(len(os.listdir(path)), 6)
+            with ThreadPoolExecutor(max_workers=mw, thread_name_prefix = 'tree-build') as executor:  # Adjust max_workers as needed
                 futures = []
                 for entry in os.listdir(path):
                     full_path = os.path.join(path, entry)
-                    if os.path.isdir(full_path):
+                    if full_path not in visited and os.path.exists(full_path) and os.path.isdir(full_path) and not os.path.islink(full_path): ## handles symlinks ## may be data races with this
                         futures.append(executor.submit(explorer, full_path)) 
+                        visited.add(full_path) ## handles symlinks
                 for future in as_completed(futures):
                     try:
                         tree["children"].append(future.result())
@@ -181,15 +176,14 @@ def build_tree(path, debug = False): ### do UNIX systems not have a file TREE bu
                         pass ############## SUPER IMPORTANT
                     except Exception as e:
                         pass ############## SUPER IMPORTANT
-                        #print(f"Error processing {full_path}: {e}")
         except PermissionError:
             pass
         except KeyboardInterrupt:
-            kbi = True
-            return
+            kbi_event.set()
+            print('kbi detected')
+            raise
         except Exception as e:
-            pass ##############SUPER IMPORTANT
-            print(f"Error accessing {path}: {e}")
+            print(f"Error accessing {path}: {e}") if debug else pass
         ct = ct + 1 
         return tree
     return explorer(path)
