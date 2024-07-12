@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed  ##parallelizati
 from graphviz import Digraph
 from filelock import FileLock
 import objgraph ## this will help identify memory leaks
+import threading ### threading, threading_local ??? what do these do
 
 class TreeEventHandler(FileSystemEventHandler):
     def __init__(self, json_file, graph_file, lock_file, visualize):
@@ -130,32 +131,68 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
 
 ### TREE CREATION
 
-def build_tree(path):
+def build_tree(path, debug = False): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
     """
     Parallelized function for building the tree from a base path. This tree will be read into json format for easy interconversion between storage and variable
     """
-    tree = {"name": os.path.basename(path), "path": path, "children": []}
-    if tree["name"] is None:
-        print(path)
-    try:
-        with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust max_workers as needed
-            futures = []
-            for entry in os.listdir(path):
-                full_path = os.path.join(path, entry)
-                if os.path.isdir(full_path):
-                    futures.append(executor.submit(build_tree, full_path))
-            for future in as_completed(futures):
-                try:
-                    tree["children"].append(future.result())
-                except PermissionError:
-                    pass
-                except Exception as e:
-                    print(f"Error processing {full_path}: {e}")
-    except PermissionError:
-        pass
-    except Exception as e:
-        print(f"Error accessing {path}: {e}")
-    return tree
+    #### TODO ####
+    #figure out cause of "can't start new thread" error on UNIX systems --> does it actually impact anything?
+    #figure out why max_workers does not correlate with # threads in an obvious way
+    # figure out how to do the keyboard interrupt thing
+    #message shreyas, distributed computing is pretty cool
+    ### what is an unbound variable!!!!!!
+    # determine whether of not UNIX systems not have a file TREE or cyclic file GRAPH
+    global kbi, ct
+    kbi, ct = False, 0
+    def explorer(path):
+        nonlocal debug
+        global kbi, ct
+        if 'kbi' in globals() and globals()['kbi']: ##short circuit if keyboard interrupt is detected in any thread (doesn't work?)
+            print('kbi detected, quitting execution')
+            return
+        tree = {"name": os.path.basename(path), "path": path, "children": []}
+        if tree["name"] is None:
+            print(path)
+        #nonlocal ct ## why do I need this
+        if ct % 10000 == 0 and debug: ##debugging
+            procThread = 0 # number of threads currently working on building the tree (at least that's what it's supposed to be)
+            for t in threading.enumerate():
+                if 'tree-build' in t.name:
+                    procThread += 1
+            #### the output resulting from the following print statements is disgusting, should use lock aquire stuff
+            print('=====================')
+            print(f'Number of nodes that have finished? executing {ct}')
+            print(f"Number of threads executing this process: {procThread}")
+            print(f"active threading count: {threading.active_count()}")
+            print('=====================')
+        try:
+            ## confused how max_workers and num active threads are related
+            with ThreadPoolExecutor(max_workers=16, thread_name_prefix = 'tree-build') as executor:  # Adjust max_workers as needed
+                #print(threading.active_count()) #returns the total number of active threads in the current Python process
+                futures = []
+                for entry in os.listdir(path):
+                    full_path = os.path.join(path, entry)
+                    if os.path.isdir(full_path):
+                        futures.append(executor.submit(explorer, full_path)) 
+                for future in as_completed(futures):
+                    try:
+                        tree["children"].append(future.result())
+                    except PermissionError:
+                        pass ############## SUPER IMPORTANT
+                    except Exception as e:
+                        pass ############## SUPER IMPORTANT
+                        #print(f"Error processing {full_path}: {e}")
+        except PermissionError:
+            pass
+        except KeyboardInterrupt:
+            kbi = True
+            return
+        except Exception as e:
+            pass ##############SUPER IMPORTANT
+            print(f"Error accessing {path}: {e}")
+        ct = ct + 1 
+        return tree
+    return explorer(path)
 
 def add_nodes(graph, tree):
     """
@@ -214,7 +251,8 @@ def main():
     monitor_directory(root, json_file, graph_file, lock_file, args.visualization)
 ### global
 r = os.path.abspath(os.getcwd())
-root = r.split(os.sep)[0] + '\\\\' ## 
+root = r.split(os.sep)[0] + '\\\\' if os.name == 'nt' else '/'
+print(f"Executing program from root: {root}")
 #print(root, r.split(os.sep)[0])
 #root = ro #= r"C:\\"
 with open("JSON-Files/AlgorithmAttributes.json", 'r') as f:
