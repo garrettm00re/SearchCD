@@ -222,6 +222,7 @@ def on_hotkey():
     """
     Function to handle hotkey action. This is the UI.
     """
+    print('hotkey detected')
     root = tk.Tk()
     root.withdraw()
     folder_name = simpledialog.askstring("Input", "Enter folder name to search for:", parent=root)
@@ -289,7 +290,14 @@ if __name__ == "__main__":
     if args.visualization:
         graph = visualize_trie(trie)
         graph.render('../Visualizations/trie', format='png', view=True)
-    keyboard.add_hotkey('ctrl+g', on_hotkey) # if ctrl g is pressed -> call on_hotkey()
+    if os.name != 'nt':
+        print('inblock')
+        from pynput import keyboard
+        with keyboard.GlobalHotKeys({'<ctrl>+g': on_hotkey}) as h:
+            h.join()
+        print('outblock')
+    else:
+        keyboard.add_hotkey('ctrl+g', on_hotkey) # if ctrl g is pressed -> call on_hotkey()
     print('ready for action')
 
     #### update the trie if the tree has been built
@@ -299,10 +307,12 @@ if __name__ == "__main__":
     print('updating tree')
     tree = read_json_tree()
     trie = Trie()
+    ##### should write trie to a file and read it in each time so that the trie doesn't have to sit on RAM
     build_trie_from_tree(tree, trie)
     os.remove("tree_built.info")
     print('tree updated')
-    keyboard.wait('esc') # Keep the script running
+    if os.name == 'nt':
+        keyboard.wait('esc') # Keep the script running
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 ####################### DEPRECATED METHODS #######################

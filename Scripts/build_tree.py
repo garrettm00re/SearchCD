@@ -131,7 +131,7 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
 
 ### TREE CREATION
 kbi, ct = False, 0
-def build_tree(path, debug = False): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
+def build_tree(path, debug = True): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
     """
     Parallelized function for building the tree from a base path. This tree will be read into json format for easy interconversion between storage and variable
     """
@@ -158,10 +158,11 @@ def build_tree(path, debug = False): ### do UNIX systems not have a file TREE bu
                 print(f"active threading count: {threading.active_count()}")
                 print('=====================')
         if kbi_event.is_set():# #short circuit if keyboard interrupt is detected in any thread (doesn't work?)
-            print('kbi detected, quitting execution')
+            if debug:
+                print('kbi detected, quitting execution')
             return
         try:
-            mw = max(len(os.listdir(path)) // 2, 6)
+            mw = 1 + len(os.listdir(path))# * 2## max workers
             with ThreadPoolExecutor(max_workers=mw, thread_name_prefix = 'tree-build') as executor:  # Adjust max_workers as needed
                 futures = []
                 for entry in os.listdir(path):
@@ -173,14 +174,15 @@ def build_tree(path, debug = False): ### do UNIX systems not have a file TREE bu
                     try:
                         tree["children"].append(future.result())
                     except PermissionError:
-                        pass ############## SUPER IMPORTANT
+                        pass
                     except Exception as e:
-                        pass ############## SUPER IMPORTANT
+                        pass
         except PermissionError:
             pass
         except KeyboardInterrupt:
             kbi_event.set()
-            print('kbi detected')
+            if debug:
+                print('kbi detected')
             raise
         except Exception as e:
             print(f"Error accessing {path}: {e}") if debug else None
