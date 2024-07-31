@@ -131,7 +131,7 @@ def monitor_directory(path, json_file, graph_file, lock_file, visualize):
 
 ### TREE CREATION
 kbi, ct = False, 0
-def build_tree(path, debug = True): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
+def build_tree(path, debug = False): ### do UNIX systems not have a file TREE but instead a cyclic file GRAPH ?????????????
     """
     Parallelized function for building the tree from a base path. This tree will be read into json format for easy interconversion between storage and variable
     """
